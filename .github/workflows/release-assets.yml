@@ -21,9 +21,10 @@ jobs:
       - name: Build
         run: cargo build --release
       - name: Compress archive
-        run: cd target/release && tar -czf onefetch.tar.gz onefetch
+        run: zip onefetch
+        working-directory: target/release
       - name: Generate asset name
-        run: echo ::set-output name=filename::onefetch_${TAG_NAME#v}_${OS%-latest}_x86_64.tar.gz
+        run: echo ::set-output name=filename::onefetch_${TAG_NAME#v}_${OS%-latest}_x86_64.zip
         id: generate-name
         env:
           TAG_NAME: ${{ github.event.release.tag_name }}
@@ -34,6 +35,6 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           upload_url: ${{ github.event.release.upload_url }}
-          asset_path: ./target/release/onefetch.tar.gz
+          asset_path: ./target/release/onefetch.zip
           asset_name: ${{ steps.generate-name.outputs.filename }}
-          asset_content_type: application/gzip
+          asset_content_type: application/zip
