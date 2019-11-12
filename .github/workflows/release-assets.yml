@@ -25,7 +25,7 @@ jobs:
         run: $ZIP_PROGRAM onefetch.zip onefetch
         working-directory: target/release
         env:
-          ZIP_PROGRAM: ${{ matrix.os === 'windows-latest' && '7z' || 'zip' }}
+          ZIP_PROGRAM: ${{ matrix.os == 'windows-latest' && '7z' || 'zip' }}
       - name: Generate asset name
         run: echo ::set-output name=filename::onefetch_${TAG_NAME#v}_${OS%-latest}_x86_64.zip
         id: generate-name
