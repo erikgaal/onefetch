@@ -5,33 +5,71 @@ on:
 name: release-assets
 
 jobs:
-  deploy:
+  linux:
+    name: "Build (${{ matrix.system }})"
 
-    runs-on: ${{ matrix.os }}
+    runs-on: ubuntu-latest
 
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, windows-latest, macos-latest]
+        target: [x86_64-unknown-linux-gnu, x86_64-pc-windows-gnu]
+        include:
+          - target: x86_64-unknown-linux-gnu
+            system: linux
+          - target: x86_64-pc-windows-gnu
+            system: windows
+
+    steps:
+      - uses: actions/checkout@v1
+      - uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          target: ${{ matrix.target }}
+          override: true
+      - uses: actions-rs/cargo@v1
+        with:
+          use-cross: true
+          command: build
+          args: --release --target ${{ matrix.target }}
+      - name: Compress archive
+        run: zip onefetch.zip onefetch
+        working-directory: target/release
+      - name: Generate asset name
+        run: echo ::set-output name=filename::onefetch_$TAG_$SYSTEM_x86_64.zip
+        id: generate-name
+        env:
+          VERSION: ${${{ github.event.release.tag_name }}}#v
+          SYSTEM: ${{ matrix.system }}
+      - name: Upload release asset
+        uses: actions/upload-release-asset@v1.0.1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ github.event.release.upload_url }}
+          asset_path: ./target/release/onefetch.zip
+          asset_name: ${{ steps.generate-name.outputs.filename }}
+          asset_content_type: application/zip
+
+  macos:
+    name: "Build (macOS)"
+
+    runs-on: macos-latest
 
     steps:
       - uses: actions/checkout@v1
       - name: Install Rust
         run: brew install rust
-        if: matrix.os == 'macos-latest'
       - name: Build
         run: cargo build --release
       - name: Compress archive
-        run: $ZIP_PROGRAM onefetch.zip onefetch
+        run: zip onefetch.zip onefetch
         working-directory: target/release
-        env:
-          ZIP_PROGRAM: ${{ matrix.os == 'windows-latest' && '7z' || 'zip' }}
       - name: Generate asset name
-        run: echo ::set-output name=filename::onefetch_${TAG_NAME#v}_${OS%-latest}_x86_64.zip
+        run: echo ::set-output name=filename::onefetch_$TAG_macos_x86_64.zip
         id: generate-name
         env:
-          TAG_NAME: ${{ github.event.release.tag_name }}
-          OS: ${{ matrix.os }}
+          VERSION: ${${{ github.event.release.tag_name }}}#v
       - name: Upload release asset
         uses: actions/upload-release-asset@v1.0.1
         env:
